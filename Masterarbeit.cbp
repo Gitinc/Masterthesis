@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Masterarbeit" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/Masterarbeit" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-I /home/noah.jaitner/Arma/include -DARMA_DONT_USE_WRAPPER -lopenblas -llapack" />
+					<Add option="-g" />
+					<Add directory="include" />
+				</Compiler>
+				<Linker>
+					<Add option="-I /home/noah.jaitner/Arma/include -DARMA_DONT_USE_WRAPPER -lopenblas -llapack" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/Masterarbeit" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-I /home/noah.jaitner/Arma/include -DARMA_DONT_USE_WRAPPER -lopenblas -llapack" />
+					<Add directory="include" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add option="-I /home/noah.jaitner/Arma/include -DARMA_DONT_USE_WRAPPER -lopenblas -llapack" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="CMakeLists.txt" />
+		<Unit filename="MackeyGlass.cpp" />
+		<Unit filename="MackeyGlass.h" />
+		<Unit filename="Mask.cpp" />
+		<Unit filename="Mask.h" />
+		<Unit filename="TestSL.cpp" />
+		<Unit filename="helper.cpp" />
+		<Unit filename="helper.h" />
+		<Unit filename="include/LorentzAttractor.h" />
+		<Unit filename="include/Narma10.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="src/LorentzAttractor.cpp" />
+		<Unit filename="src/Narma10.cpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
