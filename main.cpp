@@ -10,6 +10,8 @@
 #include <Narma10.h>
 #include <iterator>
 #include <random>
+#include <chrono>
+#include <omp.h>
 
 using namespace std;
 
@@ -28,6 +30,7 @@ public:
     int K_totallength;
     int seed;
     double D;
+    int delay;
     string system;
     vector<double> K_values;
     vector<double> x_n;
@@ -37,7 +40,7 @@ public:
     vector<vector<double>> K_training_inputs;
 
 
-    Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD){
+    Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay){
         M = SM;
         N = SN;
         tau_max = Stau;
@@ -52,6 +55,7 @@ public:
         K_totallength = SK_totallength;
         seed = Sseed;
         system = Ssystem;
+        delay = Sdelay;
     }
 
     void createBasic_Matrix(){
@@ -164,6 +168,7 @@ public:
         for(int i = 0;i<N;i++){
             x_out_current += K_out[(m%M+M)%M][i]*x_n[i];
         }
+
         return x_out_current;
     }
 
@@ -188,15 +193,14 @@ public:
 
         Mask Mask_used(Nv,seed);
 
-        double mean = 0.0;
-        double stddev = D;
-        default_random_engine generator;
-        normal_distribution<double> dist(mean, stddev);
-
         vector<vector<double>> MaskedInput(K_totallength, vector<double> (Nv));
         for (int i = 0; i < K_totallength; ++i) {
             for (int j = 0; j < Nv; ++j) {
-                MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j] + dist(generator);
+                if(delay != 0){
+                    MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j] + X[(i-delay)<0 ? 0:i-delay]*Mask_used.Mask_vec[j];
+                }else{
+                    MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j];
+                }
             }
         }
 
@@ -212,10 +216,20 @@ public:
         // m:  0 1 2 0 1 2 0 1 2 0...
         for (int m = 0; m < Nv; ++m) {
             x_out_Solution[m] = calculateX_out(m-current_K_training);
+
             vector<double> Back_Solution = calculateBackTerm(m-current_K_training);
             vector<double> Front_Solution = calculateFrontTerm(m,current_K_training);
             for (int n = 0; n < N; ++n) {
                 x_n[n] = Front_Solution[n] + Back_Solution[n];
+
+                double mean = 0.0;
+                double stddev = x_n[n];
+                unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+                std::default_random_engine generator (seed);
+                std::normal_distribution<double> distribution (mean,stddev);
+
+                x_n[n] = x_n[n] + D*distribution(generator);
+
             }
         }
 
@@ -226,10 +240,23 @@ public:
 
         vector<vector<double>> OutputMatrix(K_totallength, vector<double> (Nv));
 
+        #pragma omp parallel for
         for (int i = 0; i < K_totallength; ++i) {
                 OutputMatrix[i] = calc_output_forSpecificTrainingStep(i);
                 OutputMatrix[i].push_back(1);
         }
+
+        /*ofstream ergebnis("Statematrix.txt");
+            if (ergebnis.is_open())
+            {
+                for(int i = 0;i<K_totallength;i++){
+                    for(int j = 0; j< Nv;j++){
+                        ergebnis << OutputMatrix[i][j] << " ";
+                    }
+                    ergebnis << "\n";
+                }
+            }
+*/
         return OutputMatrix;
     }
 };
@@ -290,7 +317,7 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
             }
         }
 
-        double lambda = 0.000001*S_training.max();
+        double lambda = 0.00000001;
         arma::dvec w_out = arma::pinv(S_training.t()*S_training+lambda*arma::eye(used_Model.Nv+1,used_Model.Nv+1),0.00000000001)*S_training.t()*arma::conv_to<arma::mat>::from(X_Trainingsteps);
         //arma::dvec w_out = arma::solve(S_training,arma::conv_to<arma::mat>::from(X_Trainingsteps),arma::solve_opts::no_approx);
 
@@ -314,23 +341,25 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
 
 int main (int argc, char *argv[]) {
     //write_mackey_to_file(5000000,100);
-    //write_Lorentz_to_file(250000,5);
+    //write_Lorentz_to_file(100000,2);
     //write_Narma10_to_file(50000);
 
-    vector<double> NRMSE_mean_training(80);
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    vector<double> NRMSE_mean_training(100);
     vector<double> NRMSE_mean_training_values(10);
-    vector<double> NRMSE_mean_test(80);
-    vector<double> STD_training(80);
-    vector<double> STD_test(80);
+    vector<double> NRMSE_mean_test(100);
+    vector<double> STD_training(100);
+    vector<double> STD_test(100);
     vector<double> current_NRMSE;
 
     double NRMSE_test;
     double NRMSE_training;
 
-    for (int j = 0; j < 80; ++j) {
-        //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD){
-        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, 0.01*(j+1), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), stod(argv[7]));
-        current_NRMSE = calculate_System(10000,10000,stoi(argv[6]),10000,Test, false, NRMSE_mean_training_values, string(argv[8]));
+    for (int j = 0; j < 100; ++j) {
+        //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int delay){
+        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), j*0.001, stoi(argv[9]));
+        current_NRMSE = calculate_System(10000,5000,stoi(argv[6]),10000,Test, true, NRMSE_mean_training_values, string(argv[8]));
         //Solution Test(11,11,16,20,1,1,40,0.01*(j+1),1,0,35000, 0);
         //current_NRMSE = calculate_System(10000,5000,1,10000,Test, true, NRMSE_mean_training_values);
         NRMSE_mean_test[j] = c_mean(current_NRMSE);
@@ -340,15 +369,19 @@ int main (int argc, char *argv[]) {
     }
 
 
-    string PathForSolution = string(argv[8]) + string("_MeanWithSTD_M") + string(argv[1]) + string("_N") + string(argv[2]) + string("_Nv") + string(argv[3]) + string("_g") + string(argv[4]) + string("_J0") + string(argv[5]) + string("_Pre") + string(argv[6]) + string("_D") + string(argv[7]) + string(".txt");
+    string PathForSolution = string(argv[8]) + string("_MeanWithSTD_M") + string(argv[1]) + string("_N") + string(argv[2]) + string("_Nv") + string(argv[3]) + string("_g") + string(argv[4]) + string("_J0") + string(argv[5]) + string("_Pre") + string(argv[6]) + string("_Delay") + string(argv[9]) + string("_K") + string(argv[7]) + string(".txt");
     ofstream ergebnis(PathForSolution);
     if (ergebnis.is_open())
     {
-        for(int i = 0; i < 80; ++i){
+        for(int i = 0; i < 100; ++i){
             ergebnis << NRMSE_mean_test[i] << " " << STD_test[i] << " " <<  NRMSE_mean_training[i] << " " << STD_training[i] <<"\n";
         }
         ergebnis.close();
     }
+
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::minutes> (end - begin).count() << "[m]" << std::endl;
 
     //./Masterarbeit M N Nv g J0 pre D task
     // ko
