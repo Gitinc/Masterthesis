@@ -153,29 +153,63 @@ def colorPlot(prediction, system = "m"):
     if system == "n":
         FilePath = '/home/noah.jaitner/Local/Masterarbeit/bin/Release/narma/narma.dat_MeanWithSTD_M2_N2_Nv'
     j = 0
-    NRMSE_all = np.empty(shape=(19,100))
-    for i in range(2,21):
+    NRMSE_all = np.empty(shape=(40,100))
+    for i in range(2,41):
         NRMSE = np.array([])
         if system == "m":
             complete_FilePath = FilePath + str(i) + '_g1_J00_Pre'+ prediction + '_Delay0_K0.05.txt'
         if system == "l":
-            complete_FilePath = FilePath + str(i) + '_g0.012_J00.85_Pre'+ prediction + '_Delay0_K0.05.txt'
+            complete_FilePath = FilePath + str(i) + '_g0.001_J02_Pre'+ prediction + '_Delay0_K0.05.txt'
         if system == "n":
-            complete_FilePath = FilePath + str(i) + '_g1.3_J00_Pre'+ prediction + '_Delay0_K0.05.txt'
-        print(complete_FilePath)
+            complete_FilePath = FilePath + str(i) + '_g1.12_J00.2_Pre'+ prediction + '_Delay0_K0.05.txt'
         for line in open(complete_FilePath, 'r'):
             values = [float(s) for s in line.split()]
             NRMSE = np.append(NRMSE,values[0])
+        NRMSE[NRMSE > 1] = 1
         NRMSE_all[j] = NRMSE
         j = j+1
-    Nv = np.linspace(2,21,19)
+    Nv = np.linspace(2,41,40)
     D = np.linspace(0,0.1,100)
     fig, ax = plt.subplots()
     c = ax.pcolormesh(D, Nv, NRMSE_all)
-    ax.set_title('Test')
+    ax.set_title(system + prediction)
     fig.colorbar(c, ax=ax)
     plt.show()
     
+def ParameterOptimization(prediction, system = "m"):
+    if system == "m":
+        FilePath = '/home/noah.jaitner/Local/Masterarbeit/bin/Release/mackey/mackey.dat_MeanWithSTD_M2_N2_Nv20_g-0.01_J0'
+    if system == "l":
+        FilePath = '/home/noah.jaitner/Local/Masterarbeit/bin/Release/lorenz/lorenz.dat_MeanWithSTD_M2_N2_Nv20_g-0.001_J0'
+    if system == "n":
+        FilePath = '/home/noah.jaitner/Local/Masterarbeit/bin/Release/narma/narma.dat_MeanWithSTD_M2_N2_Nv20_g-1_J0'
+    j = 0
+    NRMSE_all = np.empty(shape=(20,100))
+    for i in range(0,20):
+        NRMSE = np.array([])
+        if system == "m":
+            complete_FilePath = FilePath + str(i*0.1) + '_Pre'+ prediction + '_Delay0_K0.05.txt'
+        if system == "l":
+            complete_FilePath = FilePath + str(i*0.1) + '_Pre'+ prediction + '_Delay0_K0.05.txt'
+        if system == "n":
+            complete_FilePath = FilePath + str(i*0.1) + '_Pre'+ prediction + '_Delay0_K0.05.txt'
+        try:
+            for line in open(complete_FilePath, 'r'):
+                values = [float(s) for s in line.split()]
+                NRMSE = np.append(NRMSE,values[0])
+        except FileNotFoundError:
+            NRMSE = np.append(NRMSE,0.95*np.ones(100))
+        NRMSE[NRMSE > 1] = 1
+        NRMSE_all[j] = NRMSE
+        j = j+1
+    J0 = np.linspace(0,2,20)
+    g = np.linspace(0,1,100)
+    fig, ax = plt.subplots()
+    c = ax.pcolormesh(g, J0, NRMSE_all)
+    ax.set_title(system + prediction)
+    fig.colorbar(c, ax=ax)
+    plt.show()
+  
 def colorPlotDelay():
     FilePath = '/home/noah.jaitner/Local/Masterarbeit/bin/Release/mackey/mackey.dat_MeanWithSTD_M2_N2_Nv'
     j = 0
@@ -229,10 +263,16 @@ if __name__ == "__main__":
     #plotNarma()
     #plotMackey()
     colorPlot("1","m")
-    #colorPlot("1","l")
+    colorPlot("1","l")
     colorPlot("1","n")
     colorPlot("5","m")
-    #colorPlot("5","l")
+    colorPlot("5","l")
     colorPlot("5","n")
     #colorPlotDelay()
     #StatematrixCalc()
+    #ParameterOptimization("1","m")
+    #ParameterOptimization("1","l")
+    #ParameterOptimization("5","m")
+    #ParameterOptimization("5","l")
+    #ParameterOptimization("1","n")
+    #ParameterOptimization("5","n")

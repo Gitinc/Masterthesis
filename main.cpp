@@ -54,7 +54,7 @@ public:
         D = SD;
         K_totallength = SK_totallength;
         seed = Sseed;
-        system = Ssystem;
+        system = "/home/noah.jaitner/Local/Masterarbeit/Timeseries/" + Ssystem;
         delay = Sdelay;
     }
 
@@ -139,6 +139,7 @@ public:
 
     double nonlinear_G(double x) {
         x = x*exp(-a/(1+x/I_sat));
+        //x = a*x/(1+x/I_sat);
 
         return x;
     }
@@ -192,15 +193,13 @@ public:
         }
 
         Mask Mask_used(Nv,seed);
+        Mask Mask_used_delay(Nv,seed+1);
 
         vector<vector<double>> MaskedInput(K_totallength, vector<double> (Nv));
+        int delay_factor = (delay == 0) ? 0 : 1;
         for (int i = 0; i < K_totallength; ++i) {
             for (int j = 0; j < Nv; ++j) {
-                if(delay != 0){
-                    MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j] + X[(i-delay)<0 ? 0:i-delay]*Mask_used.Mask_vec[j];
-                }else{
-                    MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j];
-                }
+                MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j] + delay_factor*X[i+delay]*Mask_used_delay.Mask_vec[j];
             }
         }
 
@@ -283,8 +282,9 @@ public:
                 }
 }
 */
-vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_prediciton, int K_buffer, Solution used_Model, bool writeToFile, vector<double>& NRMSE_mean_training, string system_use){
+vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_prediciton, int K_buffer, Solution used_Model, bool writeToFile, vector<double>& NRMSE_mean_training, string system_use, int delay){
 
+    system_use = "/home/noah.jaitner/Local/Masterarbeit/Timeseries/" + system_use;
     vector<double> X;
     ifstream file(system_use);
     if (file.is_open()) {
@@ -296,10 +296,10 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
     }
 
     vector<double> NRMSE_mean_test(10);
-    vector<double> X_Trainingsteps = vector<double>(X.begin() + K_buffer + ahead_prediciton, X.begin() + K_buffer+K_trainingsteps +ahead_prediciton);
-    vector<double> X_Teststeps = vector<double>(X.begin() + 2*K_buffer+K_trainingsteps+ahead_prediciton, X.begin()+2*K_buffer+K_teststeps+K_trainingsteps+ahead_prediciton);
+    vector<double> X_Trainingsteps = vector<double>(X.begin() + K_buffer + ahead_prediciton + delay, X.begin() + K_buffer+K_trainingsteps +ahead_prediciton +delay);
+    vector<double> X_Teststeps = vector<double>(X.begin() + 2*K_buffer+K_trainingsteps+ahead_prediciton + delay, X.begin()+2*K_buffer+K_teststeps+K_trainingsteps+ahead_prediciton+delay);
 
-    for(int i = 0;i<NRMSE_mean_test.size();i++){
+    for(int n = 0;n<NRMSE_mean_test.size();n++){
 
         used_Model.createBasic_Matrix();
         vector<vector<double>> Model_fullStateMatrix = used_Model.calcOutputMatrix();
@@ -317,7 +317,7 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
             }
         }
 
-        double lambda = 0.00000001;
+        double lambda = 0.000005;
         arma::dvec w_out = arma::pinv(S_training.t()*S_training+lambda*arma::eye(used_Model.Nv+1,used_Model.Nv+1),0.00000000001)*S_training.t()*arma::conv_to<arma::mat>::from(X_Trainingsteps);
         //arma::dvec w_out = arma::solve(S_training,arma::conv_to<arma::mat>::from(X_Trainingsteps),arma::solve_opts::no_approx);
 
@@ -333,8 +333,8 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
                 ergebnis.close();
             }
         }
-        NRMSE_mean_test[i] = calc_NRMSE(X_Teststeps, arma::conv_to<vector<double>>::from(testing_outcome_weights));
-        NRMSE_mean_training[i] = calc_NRMSE(X_Trainingsteps, arma::conv_to<vector<double>>::from(training_outcome_weights));
+        NRMSE_mean_test[n] = calc_NRMSE(X_Teststeps, arma::conv_to<vector<double>>::from(testing_outcome_weights));
+        NRMSE_mean_training[n] = calc_NRMSE(X_Trainingsteps, arma::conv_to<vector<double>>::from(training_outcome_weights));
     }
     return NRMSE_mean_test;
 }
@@ -358,8 +358,8 @@ int main (int argc, char *argv[]) {
 
     for (int j = 0; j < 100; ++j) {
         //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int delay){
-        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), j*0.001, stoi(argv[9]));
-        current_NRMSE = calculate_System(10000,5000,stoi(argv[6]),10000,Test, true, NRMSE_mean_training_values, string(argv[8]));
+        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), 0.002*j, stoi(argv[9]));
+        current_NRMSE = calculate_System(10000,5000,stoi(argv[6]),10000,Test, false, NRMSE_mean_training_values, string(argv[8]),stoi(argv[9]));
         //Solution Test(11,11,16,20,1,1,40,0.01*(j+1),1,0,35000, 0);
         //current_NRMSE = calculate_System(10000,5000,1,10000,Test, true, NRMSE_mean_training_values);
         NRMSE_mean_test[j] = c_mean(current_NRMSE);
