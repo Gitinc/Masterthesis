@@ -48,6 +48,8 @@ void Narma10::updateY_k(int seed_rand){
 
     tmp = alpha*y_history[9] + beta*y_history[9]*sum_OfHistory+gamma*u_history[9]*u_history[0]+delta;
 
+    if(tmp > 1) tmp = 1;
+
     for(int i = 0; i<sizeof(y_history)/sizeof(y_history[0])-1;i++){
         y_history[i] = y_history[i+1];
         u_history[i] = u_history[i+1];
@@ -60,9 +62,11 @@ void Narma10::updateY_k(int seed_rand){
 void write_Narma10_to_file(int sample_all){
     Narma10 TimeSeries(0.3,0.05,1.5,0.1);
     double X[sample_all];
+    double U[sample_all];
     for(int i = 0;i< sample_all;i++){
         TimeSeries.updateY_k(i);
         X[i] = TimeSeries.y_history[9];
+        U[i] = TimeSeries.u_history[9];
     }
 
     std::ofstream myfile ("narma.dat");
@@ -72,6 +76,15 @@ void write_Narma10_to_file(int sample_all){
             myfile << std::fixed << std::setprecision(15) << X[i] << "\n" ;
         }
         myfile.close();
+    }
+    else  throw std::invalid_argument( "File not open" );
+    std::ofstream file ("narma_Input.dat");
+    if (file.is_open())
+    {
+        for(int i = 0; i < sample_all; ++i){
+            file << std::fixed << std::setprecision(15) << U[i] << "\n" ;
+        }
+        file.close();
     }
     else  throw std::invalid_argument( "File not open" );
 }

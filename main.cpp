@@ -4,14 +4,13 @@
 #include "helper.h"
 #include "Mask.h"
 #include "MackeyGlass.h"
-#include <iomanip>
 #include <string>
 #include "LorentzAttractor.h"
 #include <Narma10.h>
-#include <iterator>
 #include <random>
 #include <chrono>
 #include <omp.h>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -30,7 +29,8 @@ public:
     int K_totallength;
     int seed;
     double D;
-    int delay;
+    int delay_1;
+    int delay_2;
     string system;
     vector<double> K_values;
     vector<double> x_n;
@@ -40,7 +40,7 @@ public:
     vector<vector<double>> K_training_inputs;
 
 
-    Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay){
+    Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay_1, int Sdelay_2){
         M = SM;
         N = SN;
         tau_max = Stau;
@@ -54,8 +54,12 @@ public:
         D = SD;
         K_totallength = SK_totallength;
         seed = Sseed;
-        system = "/home/noah.jaitner/Local/Masterarbeit/Timeseries/" + Ssystem;
-        delay = Sdelay;
+        if(Ssystem == "narma"){
+            Ssystem += "_Input";
+        }
+        system = "/home/noah.jaitner/Local/Masterarbeit/Timeseries/" + Ssystem + ".dat";
+        delay_1 = Sdelay_1;
+        delay_2 = Sdelay_2;
     }
 
     void createBasic_Matrix(){
@@ -132,14 +136,13 @@ public:
     void createK_values(){
         vector<double> Kvalues(tau_max, 0);
 
-        for(int i = 0;i<Kvalues.size();i++) Kvalues[i] = 0;
+        for(double & Kvalue : Kvalues) Kvalue = 0;
         Kvalues[tau_max-1] = 1;
         K_values = Kvalues;
     }
 
     double nonlinear_G(double x) {
         x = x*exp(-a/(1+x/I_sat));
-        //x = a*x/(1+x/I_sat);
 
         return x;
     }
@@ -192,17 +195,22 @@ public:
             file.close();
         }
 
+        struct timeval time_now{};
+        gettimeofday(&time_now, nullptr);
+        time_t msecs_time = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
+
         Mask Mask_used(Nv,seed);
-        Mask Mask_used_delay(Nv,seed+1);
+        Mask Mask_used_delay_1(Nv,msecs_time-10000);
+        Mask Mask_used_delay_2(Nv,msecs_time-20000);
 
         vector<vector<double>> MaskedInput(K_totallength, vector<double> (Nv));
-        int delay_factor = (delay == 0) ? 0 : 1;
+        int delay_factor_1 = (delay_1 == 0) ? 0 : 1;
+        int delay_factor_2 = (delay_2 == 0) ? 0 : 1;
         for (int i = 0; i < K_totallength; ++i) {
             for (int j = 0; j < Nv; ++j) {
-                MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j] + delay_factor*X[i+delay]*Mask_used_delay.Mask_vec[j];
+                MaskedInput[i][j] = X[i]*Mask_used.Mask_vec[j] + delay_factor_1*X[i-delay_1<0 ? 0 : i-delay_1]*Mask_used_delay_1.Mask_vec[j] + delay_factor_2*X[i-delay_2<0 ? 0 : i-delay_2]*Mask_used_delay_2.Mask_vec[j];
             }
         }
-
         return MaskedInput;
     }
 
@@ -223,8 +231,8 @@ public:
 
                 double mean = 0.0;
                 double stddev = x_n[n];
-                unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-                std::default_random_engine generator (seed);
+                unsigned current_ms_seed = std::chrono::system_clock::now().time_since_epoch().count();
+                std::default_random_engine generator (current_ms_seed);
                 std::normal_distribution<double> distribution (mean,stddev);
 
                 x_n[n] = x_n[n] + D*distribution(generator);
@@ -244,8 +252,8 @@ public:
                 OutputMatrix[i] = calc_output_forSpecificTrainingStep(i);
                 OutputMatrix[i].push_back(1);
         }
-
-        /*ofstream ergebnis("Statematrix.txt");
+/*
+        ofstream ergebnis("Statematrix.txt");
             if (ergebnis.is_open())
             {
                 for(int i = 0;i<K_totallength;i++){
@@ -282,9 +290,9 @@ public:
                 }
 }
 */
-vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_prediciton, int K_buffer, Solution used_Model, bool writeToFile, vector<double>& NRMSE_mean_training, string system_use, int delay){
+vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_prediciton, int K_buffer, Solution used_Model, bool writeToFile, vector<double>& NRMSE_mean_training, string system_use, double lambda){
 
-    system_use = "/home/noah.jaitner/Local/Masterarbeit/Timeseries/" + system_use;
+    system_use = "/home/noah.jaitner/Local/Masterarbeit/Timeseries/" + system_use + ".dat";
     vector<double> X;
     ifstream file(system_use);
     if (file.is_open()) {
@@ -296,10 +304,10 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
     }
 
     vector<double> NRMSE_mean_test(10);
-    vector<double> X_Trainingsteps = vector<double>(X.begin() + K_buffer + ahead_prediciton + delay, X.begin() + K_buffer+K_trainingsteps +ahead_prediciton +delay);
-    vector<double> X_Teststeps = vector<double>(X.begin() + 2*K_buffer+K_trainingsteps+ahead_prediciton + delay, X.begin()+2*K_buffer+K_teststeps+K_trainingsteps+ahead_prediciton+delay);
+    vector<double> X_Trainingsteps = vector<double>(X.begin() + K_buffer + ahead_prediciton, X.begin() + K_buffer+K_trainingsteps +ahead_prediciton);
+    vector<double> X_Teststeps = vector<double>(X.begin() + 2*K_buffer+K_trainingsteps+ahead_prediciton, X.begin()+2*K_buffer+K_teststeps+K_trainingsteps+ahead_prediciton);
 
-    for(int n = 0;n<NRMSE_mean_test.size();n++){
+    for(int count_mask = 0;count_mask<NRMSE_mean_test.size();count_mask++){
 
         used_Model.createBasic_Matrix();
         vector<vector<double>> Model_fullStateMatrix = used_Model.calcOutputMatrix();
@@ -317,7 +325,6 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
             }
         }
 
-        double lambda = 0.000005;
         arma::dvec w_out = arma::pinv(S_training.t()*S_training+lambda*arma::eye(used_Model.Nv+1,used_Model.Nv+1),0.00000000001)*S_training.t()*arma::conv_to<arma::mat>::from(X_Trainingsteps);
         //arma::dvec w_out = arma::solve(S_training,arma::conv_to<arma::mat>::from(X_Trainingsteps),arma::solve_opts::no_approx);
 
@@ -333,8 +340,8 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
                 ergebnis.close();
             }
         }
-        NRMSE_mean_test[n] = calc_NRMSE(X_Teststeps, arma::conv_to<vector<double>>::from(testing_outcome_weights));
-        NRMSE_mean_training[n] = calc_NRMSE(X_Trainingsteps, arma::conv_to<vector<double>>::from(training_outcome_weights));
+        NRMSE_mean_test[count_mask] = calc_NRMSE(X_Teststeps, arma::conv_to<vector<double>>::from(testing_outcome_weights));
+        NRMSE_mean_training[count_mask] = calc_NRMSE(X_Trainingsteps, arma::conv_to<vector<double>>::from(training_outcome_weights));
     }
     return NRMSE_mean_test;
 }
@@ -342,7 +349,7 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
 int main (int argc, char *argv[]) {
     //write_mackey_to_file(5000000,100);
     //write_Lorentz_to_file(100000,2);
-    //write_Narma10_to_file(50000);
+    write_Narma10_to_file(50000);
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -357,9 +364,9 @@ int main (int argc, char *argv[]) {
     double NRMSE_training;
 
     for (int j = 0; j < 100; ++j) {
-        //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int delay){
-        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), 0.002*j, stoi(argv[9]));
-        current_NRMSE = calculate_System(10000,5000,stoi(argv[6]),10000,Test, false, NRMSE_mean_training_values, string(argv[8]),stoi(argv[9]));
+        //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int delay_1, int delay_2){
+        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), j*0.01, stoi(argv[9]),stod(argv[10]));
+        current_NRMSE = calculate_System(10000,5000,stoi(argv[6]),10000,Test, false, NRMSE_mean_training_values, string(argv[8]),stod(argv[11]));
         //Solution Test(11,11,16,20,1,1,40,0.01*(j+1),1,0,35000, 0);
         //current_NRMSE = calculate_System(10000,5000,1,10000,Test, true, NRMSE_mean_training_values);
         NRMSE_mean_test[j] = c_mean(current_NRMSE);
@@ -369,7 +376,7 @@ int main (int argc, char *argv[]) {
     }
 
 
-    string PathForSolution = string(argv[8]) + string("_MeanWithSTD_M") + string(argv[1]) + string("_N") + string(argv[2]) + string("_Nv") + string(argv[3]) + string("_g") + string(argv[4]) + string("_J0") + string(argv[5]) + string("_Pre") + string(argv[6]) + string("_Delay") + string(argv[9]) + string("_K") + string(argv[7]) + string(".txt");
+    string PathForSolution = string(argv[8]) + string("_MeanWithSTD_M") + string(argv[1]) + string("_N") + string(argv[2]) + string("_Nv") + string(argv[3]) + string("_g") + string(argv[4]) + string("_J0") + string(argv[5]) + string("_Pre") + string(argv[6]) + string("_Delay1") + string(argv[9]) + string("_Delay2") + string(argv[10]) + string("_K") + string(argv[7]) + string("_Rtik") + string(argv[11]) + string(".txt");
     ofstream ergebnis(PathForSolution);
     if (ergebnis.is_open())
     {
@@ -381,7 +388,7 @@ int main (int argc, char *argv[]) {
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::minutes> (end - begin).count() << "[m]" << std::endl;
+//    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::minutes> (end - begin).count() << "[m]" << std::endl;
 
     //./Masterarbeit M N Nv g J0 pre D task
     // ko
