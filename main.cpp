@@ -118,7 +118,7 @@ public:
         }*/
 
         K_out = createI(N,M);
-        for(int shift = 0; i<kappa;i++){
+        for(int shift = 0; shift<kappa;shift++){
             K_out = ShiftMatrix(K_out);
         }
     }
