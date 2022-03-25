@@ -40,19 +40,18 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Unit filename="CMakeLists.txt" />
-		<Unit filename="MackeyGlass.cpp" />
-		<Unit filename="MackeyGlass.h" />
-		<Unit filename="Mask.cpp" />
-		<Unit filename="Mask.h" />
-		<Unit filename="TestSL.cpp" />
-		<Unit filename="helper.cpp" />
-		<Unit filename="helper.h" />
 		<Unit filename="include/LorentzAttractor.h" />
+		<Unit filename="include/MackeyGlass.h" />
+		<Unit filename="include/Mask.h" />
 		<Unit filename="include/Narma10.h" />
+		<Unit filename="include/helper.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="src/LorentzAttractor.cpp" />
+		<Unit filename="src/MackeyGlass.cpp" />
+		<Unit filename="src/Mask.cpp" />
 		<Unit filename="src/Narma10.cpp" />
+		<Unit filename="src/TestSL.cpp" />
+		<Unit filename="src/helper.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

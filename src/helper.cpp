@@ -1,6 +1,7 @@
 #include "helper.h"
 #include<vector>
 #include <stdexcept>
+#include <algorithm>
 #include <cmath>
 
 std::vector<double> multiplyMatrixVector(std::vector<std::vector<double>> A,std::vector<double> u){
@@ -22,6 +23,21 @@ std::vector<double> multiplyScalarVector(double lambda,std::vector<double> u){
         }
 
     return UmultiLambda;
+}
+
+std::vector<std::vector<double>> multiplyScalarMatrix(double lambda,std::vector<std::vector<double>> A){
+    std::vector<double> row(A.size(), 0);
+    std::vector<std::vector<double>> Amultilambda(A[0].size(), row);
+
+    for(int i=0;i<A.size();i++)
+    {
+        for(int j=0;j<A[0].size();j++)
+        {
+            Amultilambda[i][j]=lambda*A[i][j];
+        }
+    }
+
+    return Amultilambda;
 }
 
 std::vector<std::vector<double>> multiplyMatrix(std::vector<std::vector<double>> A,std::vector<std::vector<double>> B){
@@ -78,6 +94,15 @@ std::vector<std::vector<double>> createI(int n, int m){
     }
 
     return I;
+}
+
+std::vector<std::vector<double>> ShiftMatrix(std::vector<std::vector<double>> matrix)
+{
+    for (auto &row: matrix) // move columns to the left
+    {
+        rotate(row.begin(), row.begin() + 1, row.end());
+    }
+    return matrix;
 }
 
 double c_mean(std::vector<double> input){

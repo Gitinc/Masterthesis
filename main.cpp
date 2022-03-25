@@ -6,6 +6,7 @@
 #include "MackeyGlass.h"
 #include <string>
 #include "LorentzAttractor.h"
+#include<boost/random.hpp>
 #include <Narma10.h>
 #include <random>
 #include <chrono>
@@ -18,9 +19,9 @@ class Solution {
 public:
     int M;
     int N;
-    int tau_max;
+    int kappa;
     int Nv;
-    double c_ring;
+    double typeMatrix;
     double I_sat;
     double a;
     double K;
@@ -29,6 +30,7 @@ public:
     int K_totallength;
     int seed;
     double D;
+    double D_NLA;
     int delay_1;
     int delay_2;
     string system;
@@ -40,12 +42,12 @@ public:
     vector<vector<double>> K_training_inputs;
 
 
-    Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay_1, int Sdelay_2){
+    Solution(int SM, int SN, int Skappa, int SNv, int StypeMatrix, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay_1, int Sdelay_2){
         M = SM;
         N = SN;
-        tau_max = Stau;
+        kappa = Skappa;
         Nv = SNv;
-        c_ring = Sc_ring;
+        typeMatrix = StypeMatrix;
         I_sat = SI_sat;
         a = Sa;
         K = SK;
@@ -63,7 +65,6 @@ public:
     }
 
     void createBasic_Matrix(){
-        createK_values();
         createK_in();
         createX_n();
         createK_nin();
@@ -115,14 +116,11 @@ public:
                 n = 0;
             }
         }*/
-        K_out = createI(N,M);
 
-        /*for(int i = 0;i<M;i++){
-            for(int j = 0;j<N;j++){
-                Kout_correct_size[i][j] = Kout[i][j];
-            }
+        K_out = createI(N,M);
+        for(int shift = 0; i<kappa;i++){
+            K_out = ShiftMatrix(K_out);
         }
-        K_out = Kout_correct_size;*/
     }
 
     void createX_n(){
@@ -131,14 +129,6 @@ public:
         for(int i = 0;i<N;i++) xn[i] = 0;
 
         x_n = xn;
-    }
-
-    void createK_values(){
-        vector<double> Kvalues(tau_max, 0);
-
-        for(double & Kvalue : Kvalues) Kvalue = 0;
-        Kvalues[tau_max-1] = 1;
-        K_values = Kvalues;
     }
 
     double nonlinear_G(double x) {
@@ -222,7 +212,7 @@ public:
         // Nv: 0 1 2 3 4 0 1 2 3 4...
         // m:  0 1 2 0 1 2 0 1 2 0...
         for (int m = 0; m < Nv; ++m) {
-            x_out_Solution[m] = calculateX_out(m-current_K_training);
+            //x_out_Solution[m] = calculateX_out(m-current_K_training);
 
             vector<double> Back_Solution = calculateBackTerm(m-current_K_training);
             vector<double> Front_Solution = calculateFrontTerm(m,current_K_training);
@@ -235,9 +225,10 @@ public:
                 std::default_random_engine generator (current_ms_seed);
                 std::normal_distribution<double> distribution (mean,stddev);
 
-                x_n[n] = x_n[n] + D*distribution(generator);
+                x_n[n] = x_n[n] + D*K_in[((m-current_K_training)%M+M)%M][n]*distribution(generator);
 
             }
+            x_out_Solution[m] = calculateX_out(m-current_K_training);
         }
 
         return x_out_Solution;
@@ -349,7 +340,7 @@ vector<double> calculate_System(int K_trainingsteps, int K_teststeps, int ahead_
 int main (int argc, char *argv[]) {
     //write_mackey_to_file(5000000,100);
     //write_Lorentz_to_file(100000,2);
-    write_Narma10_to_file(50000);
+    //write_Narma10_to_file(50000);
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -365,7 +356,7 @@ int main (int argc, char *argv[]) {
 
     for (int j = 0; j < 100; ++j) {
         //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int delay_1, int delay_2){
-        Solution Test(stoi(argv[1]), stoi(argv[2]), 16, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), j*0.01, stoi(argv[9]),stod(argv[10]));
+        Solution Test(stoi(argv[1]), stoi(argv[2]), j, stoi(argv[3]), 1, 0.21910664, 3.00715971, stod(argv[7]), stod(argv[4]), stod(argv[5]), 40000, 0, string(argv[8]), 0, stoi(argv[9]), stoi(argv[10]));
         current_NRMSE = calculate_System(10000,5000,stoi(argv[6]),10000,Test, false, NRMSE_mean_training_values, string(argv[8]),stod(argv[11]));
         //Solution Test(11,11,16,20,1,1,40,0.01*(j+1),1,0,35000, 0);
         //current_NRMSE = calculate_System(10000,5000,1,10000,Test, true, NRMSE_mean_training_values);
@@ -376,7 +367,7 @@ int main (int argc, char *argv[]) {
     }
 
 
-    string PathForSolution = string(argv[8]) + string("_MeanWithSTD_M") + string(argv[1]) + string("_N") + string(argv[2]) + string("_Nv") + string(argv[3]) + string("_g") + string(argv[4]) + string("_J0") + string(argv[5]) + string("_Pre") + string(argv[6]) + string("_Delay1") + string(argv[9]) + string("_Delay2") + string(argv[10]) + string("_K") + string(argv[7]) + string("_Rtik") + string(argv[11]) + string(".txt");
+    string PathForSolution = string(argv[8]) + string("_MeanWithSTD_ReadoutAfter_M") + string(argv[1]) + string("_N") + string(argv[2]) + string("_Nv") + string(argv[3]) + string("_g") + string(argv[4]) + string("_J0") + string(argv[5]) + string("_Pre") + string(argv[6]) + string("_Delay1") + string(argv[9]) + string("_Delay2") + string(argv[10]) + string("_K") + string(argv[7]) + string("_Rtik") + string(argv[11]) + string(".txt");
     ofstream ergebnis(PathForSolution);
     if (ergebnis.is_open())
     {
@@ -387,6 +378,7 @@ int main (int argc, char *argv[]) {
     }
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
 
 //    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::minutes> (end - begin).count() << "[m]" << std::endl;
 
