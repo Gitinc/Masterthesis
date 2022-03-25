@@ -1,0 +1,76 @@
+
+*** These modified files were found in JOE when it aborted on Fri Mar 25 14:28:36 2022
+*** JOE was aborted by UNIX signal 1
+
+*** Datei '(Unbenannt)'
+/home/noah.jaitner/Local/Masterarbeit/.git/COMMIT_EDITMSG
+
+*** Datei '/home/noah.jaitner/Local/Masterarbeit/.git/COMMIT_EDITMSG'
+add coding changes
+
+# Bitte geben Sie eine Commit-Beschreibung für Ihre Änderungen ein. Zeilen,
+# die mit '#' beginnen, werden ignoriert, und eine leere Beschreibung
+# bricht den Commit ab.
+#
+# Auf Branch ITP
+# Ihr Branch ist 1 Commit vor 'origin/ITP'.
+#   (benutzen Sie "git push", um lokale Commits zu publizieren)
+#
+# Zum Commit vorgemerkte Änderungen:
+#	geändert:       Masterarbeit.cbp
+#	geändert:       Masterarbeit.depend
+#	geändert:       Masterarbeit.layout
+#	neue Datei:     Pics.zip
+#	neue Datei:     Pics/nrmse.png
+#	neue Datei:     Pics/nrmseLorenz1.png
+#	neue Datei:     Pics/nrmseLorenz5.png
+#	neue Datei:     Pics/nrmseMackey1.png
+#	neue Datei:     Pics/nrmseMackey5.png
+#	neue Datei:     Pics/nrmseNarma10.png
+#	neue Datei:     changingK.ods
+#	geändert:       displaySolution.py
+#	geändert:       include/helper.h
+#	neue Datei:     l.png
+#	geändert:       l1.png
+#	neue Datei:     l10.1Delay.png
+#	neue Datei:     l1DelayNv.png
+#	geändert:       l5.png
+#	neue Datei:     l50.1Delay.png
+#	neue Datei:     l5DelayNv.png
+#	geändert:       m.png
+#	geändert:       m1.png
+#	neue Datei:     m10.1Delay.png
+#	neue Datei:     m1DelayNv.png
+#	geändert:       m5.png
+#	neue Datei:     m50.1Delay.png
+#	neue Datei:     m5DelayNv.png
+#	geändert:       main.cpp
+#	geändert:       n.png
+#	geändert:       n0.png
+#	neue Datei:     n00.1Delay.png
+#	neue Datei:     n0Delay.png
+#	neue Datei:     n0DelayNv.png
+#	neue Datei:     nrmse.png
+#	neue Datei:     nrmseLorenz1.png
+#	neue Datei:     nrmseLorenz5.png
+#	neue Datei:     nrmseMackey1.png
+#	neue Datei:     nrmseMackey2MemoryCells.png
+#	neue Datei:     nrmseMackey5.png
+#	neue Datei:     nrmseNarma10.png
+#	neue Datei:     pics2.zip
+#	neue Datei:     pics2/l1DelayNv.png
+#	neue Datei:     pics2/l5DelayNv.png
+#	neue Datei:     pics2/m1DelayNv.png
+#	neue Datei:     pics2/m5DelayNv.png
+#	neue Datei:     pics2/n0DelayNv.png
+#	geändert:       src/helper.cpp
+#
+# Unversionierte Dateien:
+#	.directory
+#	.gitignore
+#
+
+
+*** Datei '* Startup Log *'
+Bearbeite '/etc/joe/editorrc'...Bearbeite '/etc/joe/ftyperc'...Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/editorrc
