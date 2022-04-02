@@ -19,5 +19,5 @@ add_executable(Masterarbeit
         src/Mask.cpp
         src/Narma10.cpp
         src/TestSL.cpp
-        main.cpp)
+        main.cpp src/Pulse.cpp include/Pulse.h)
 target_link_libraries(Masterarbeit ${ARMADILLO_LIBRARIES})
