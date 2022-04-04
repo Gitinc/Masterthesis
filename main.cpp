@@ -6,6 +6,7 @@
 #include "MackeyGlass.h"
 #include <string>
 #include "LorentzAttractor.h"
+#include "Pulse.h"
 #include<boost/random.hpp>
 #include <Narma10.h>
 #include <random>
@@ -19,7 +20,7 @@ class Solution {
 public:
     int M;
     int N;
-    int kappa;
+    int discretePoints;
     int Nv;
     double typeMatrix;
     double I_sat;
@@ -34,17 +35,17 @@ public:
     int delay_2;
     string system;
     vector<double> K_values;
-    vector<double> x_n;
+    vector<vector<double>> x_n;
     vector<vector<double>> K_in;
     vector<vector<double>> K_nin;
     vector<vector<double>> K_out;
     vector<vector<double>> K_training_inputs;
 
 
-    Solution(int SM, int SN, int Skappa, int SNv, int StypeMatrix, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay_1, int Sdelay_2){
+    Solution(int SM, int SN, int SdiscretePoints, int SNv, int StypeMatrix, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int Sdelay_1, int Sdelay_2){
         M = SM;
         N = SN;
-        kappa = Skappa;
+        discretePoints = SdiscretePoints;
         Nv = SNv;
         typeMatrix = StypeMatrix;
         I_sat = SI_sat;
@@ -121,9 +122,7 @@ public:
     }
 
     void createX_n(){
-        vector<double> xn(N, 0);
-
-        for(int i = 0;i<N;i++) xn[i] = 0;
+        vector<vector<double>> xn(N, std::vector<double> (discretePoints, 0));
 
         x_n = xn;
     }
@@ -138,7 +137,7 @@ public:
 
         vector<double> Back_Solution(N,0);
         for (int n = 0; n < N; ++n) {
-            Back_Solution[n] = K_nin[(m%M+M)%M][n] * (1 - K_out[(m%M+M)%M][n]) * x_n[n];
+            Back_Solution[n] = K_nin[(m%M+M)%M][n] * (1 - K_out[(m%M+M)%M][n]) * *max_element(begin(x_n[n]), end(x_n[n]));
         }
 
         return Back_Solution;
@@ -157,7 +156,9 @@ public:
     double calculateX_out(int m){
         double x_out_current = 0;
         for(int i = 0;i<N;i++){
-            x_out_current += K_out[(m%M+M)%M][i]*x_n[i];
+            auto biggest = std::max_element(std::begin(x_n[i]),std::end(x_n[i]));
+            double biggest_element = *biggest;
+            x_out_current += K_out[(m%M+M)%M][i]* biggest_element;
         }
 
         return x_out_current;
@@ -214,16 +215,17 @@ public:
             vector<double> Back_Solution = calculateBackTerm(m-current_K_training);
             vector<double> Front_Solution = calculateFrontTerm(m,current_K_training);
             for (int n = 0; n < N; ++n) {
-                x_n[n] = Front_Solution[n] + Back_Solution[n];
+                Pulse currentPulse(discretePoints,Front_Solution[n] + Back_Solution[n],5,-5,D*K_in[((m-current_K_training)%M+M)%M][n]* *max_element(begin(x_n[n]), end(x_n[n])));
+                x_n[n] = currentPulse.PulseVec;
 
-                double mean = 0.0;
+                /*double mean = 0.0;
                 double stddev = x_n[n];
                 unsigned current_ms_seed = std::chrono::system_clock::now().time_since_epoch().count();
                 std::default_random_engine generator (current_ms_seed);
                 std::normal_distribution<double> distribution (mean,stddev);
 
                 x_n[n] = x_n[n] + D*K_in[((m-current_K_training)%M+M)%M][n]*distribution(generator);
-
+*/
             }
             //x_out_Solution[m] = calculateX_out(m-current_K_training);
         }
@@ -350,7 +352,7 @@ int main (int argc, char *argv[]) {
 
     for (int j = 0; j < 100; ++j) {
         //     Solution(int SM, int SN, int Stau, int SNv, double Sc_ring, double SI_sat, double Sa, double SK, double Sg, double SJ_0, int SK_totallength, int Sseed, string Ssystem, double SD, int delay_1, int delay_2){
-        Solution Test(4, 4, j, 11, 1, 0.21910664, 3.00715971, 0, 3.5, 0.075, 40000, 0, "mackey", 0, 0, 0);
+        Solution Test(4, 4, 1000, 30, 1, 0.21910664, 3.00715971, 0, 3.5, 0.075, 40000, 0, "mackey", 0, 0, 0);
         current_NRMSE = calculate_System(10000,5000,5,10000,Test, false, NRMSE_mean_training_values, "mackey",0.000005);
         //Solution Test(11,11,16,20,1,1,40,0.01*(j+1),1,0,35000, 0);
         //current_NRMSE = calculate_System(10000,5000,1,10000,Test, true, NRMSE_mean_training_values);

@@ -1,10 +1,13 @@
 # ninja log v5
 7	4975	1648898841094063644	CMakeFiles/Masterarbeit.dir/src/Mask.cpp.o	30a757767263c7f5
 8	4880	1648898841002064148	CMakeFiles/Masterarbeit.dir/src/Narma10.cpp.o	f20f3cde501759a5
-0	26	1648905675006048773	build.ninja	6fff9647bf124388
+0	26	1649065963888858879	build.ninja	6fff9647bf124388
 6	3259	1648898839378073056	CMakeFiles/Masterarbeit.dir/src/helper.cpp.o	9f995d3df001e0ac
 6	3481	1648898839594071870	CMakeFiles/Masterarbeit.dir/src/LorentzAttractor.cpp.o	a758da636029103e
 7	3357	1648898839478072507	CMakeFiles/Masterarbeit.dir/src/MackeyGlass.cpp.o	43a394d8c3513d05
 18349	19343	1648905363012634714	Masterarbeit	c745443d955f660e
 8	18347	1648905362004680876	CMakeFiles/Masterarbeit.dir/main.cpp.o	ba05588352975e77
 8	3276	1648898839382073033	CMakeFiles/Masterarbeit.dir/src/TestSL.cpp.o	a89caef4a3ae274c
+12	1620	1649072865094529055	CMakeFiles/Masterarbeit.dir/src/Pulse.cpp.o	ff9b71c83f66dcab
+12	11589	1649072875058458191	CMakeFiles/Masterarbeit.dir/main.cpp.o	ba05588352975e77
+11590	12179	1649072875650453993	Masterarbeit	b28e088678ab74b6
